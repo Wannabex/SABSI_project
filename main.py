@@ -6,15 +6,14 @@
 # tu całe radio działa
 
 """
-Plan działania:
-
+Główne założenia:
 1. Uczenie sieci neuronowej (NN) żeby rozpoznawała gatunek(genre) piosenki na podstawie jej elementów charakterystycznych
    używany do nauki dataset to np https://github.com/mdeff/fma "fma_small.zip" czyli 8k utworów po 30s w 8 gatunkach
    Dataset może być wgrywany i analizowany jaka sample o różnych częstotliwościach,  może spektrogram
    biblioteka - librosa https://librosa.org/doc/latest/index.html
 
 2. Inteligentne radio ma wczytać piosenkę której ścieżkę w systemie plików podamy.
-   Piosenka będzie sprawdzana przez NN i klasyfikowana jako jeden z 8 gatunków
+   Piosenka będzie sprawdzana przez NN i klasyfikowana jako jeden z N gatunków
    Jeśli gatunek będzie taki sam jak wybrany przez nas forbiddenGenre to nie gramy jej, wychodzi error
 
 3. NN trza będzie napisać od zera, tzn obiekty pojedynczych neuronów będą tworzyły warstwy (layers).
@@ -22,7 +21,19 @@ Plan działania:
    feedForward - przesyłanie danych wejściowych dalej przez wszystkie neurony aż do wyjścia i uzyskania jakiegoś wyniku
    backPropagate - najważniejsza w procesie uczenia sieci, liczy błąd klasyfikacji sieci na jej wyjściu i informuje o nim
                    poprzednie warstwy z neuronami, aby poprawiły swoje parametry wag i biasy
+
+
+
+Podział zadań:
+1. Napisanie sieci neuronowej zaczynając od pojedynczych neuronów i przez warstwy, razem z funkcjami feedforward i backpropagate.
+   Wynikiem powinno być API dla następnych etapów do trenowania i uruchamiania NN w radiu.
+2. Opracowanie sieci neuronowej jaka będzie używana w radiu(wejścia, wyjścia i layery) i trenowanie NN tak aby miała jak największą skuteczność.
+   Trza będzie ogarnąć dane do trenowania (dataset), ale też sposób w jaki będą one w ogóle analizowane.
+3. Przygotowanie frontendu i klasy radia czyli umożliwienie włączania muzyki użytkownikowi.
+   Dodatkowo przygotowanie danych(muzyki) innych niż te którymi trenowano aby zweryfikować NN.
+
 """
+
 
 
 class IntelligentRadio:
