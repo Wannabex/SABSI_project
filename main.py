@@ -74,10 +74,10 @@ class NeuralNetwork:
 
     def train(self, X, y, iterations=100000):
         print("Starting NN training")
-        y = y.astype(float)
         for iteration in range(iterations):
             # Pass training set through network
-            output = self._feedForward(X)
+            #output = self._feedForward(X)
+            output = self.classify(X)
 
             # Calculate the error of each neuron
             error = y - output
@@ -85,7 +85,7 @@ class NeuralNetwork:
             # Multiply error ny input and gradient of activation function
             # Because of the gradient, more significant weights are adjusted more
             adjustments = np.dot(X.T, error * self._SigmoidDerivative(output))
-
+            #print(f"adjustments: {adjustments}")
             # Adjust the weights
             self.weights = self.weights + adjustments
 
@@ -175,14 +175,14 @@ if __name__ == '__main__':
             testNn = NeuralNetwork()
             print(f"Weights at the beginning: {testNn.weights}")
             output = testNn.classify(trainingX)
-            # print(f"Before training got output:\n{output}")
-            # print(trainingy == output)
+            print(f"Before training got output:\n{output}")
+            print(trainingy == output)
 
-            testNn.train(trainingX, trainingy, iterations=3)
+            testNn.train(trainingX, trainingy, iterations=100000)
             print(f"Weights after training: {testNn.weights}")
             output = testNn.classify(trainingX)
-            # print(f"After training got output:\n{output}")
-            # print(trainingy == output)
+            print(f"After training got output:\n{output}")
+            print(trainingy == output)
 
         test_1_layer_nn()
 
