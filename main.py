@@ -61,41 +61,44 @@ class IntelligentRadio:
         pass
 
 
+
+
+
 class NeuralNetwork:
+    DEBUG = True
     def __init__(self, noLayers=4, alpha=0.1):
         np.random.seed(1)
         # inputLayer = NeuronsLayer()
         # hiddenLayer1 = NeuronsLayer()
         # inputLayer2 = NeuronsLayer()
         # outputLayer = NeuronsLayer()
-        self.weights = 2 * np.random.random((3, 1)) - 1  # 3x1 matrix
-        self.biases = np.zeros((1, 3))  # 3 biases, 1 for each neuron
+        self.weights = 2 * np.random.random((4, 1)) - 1  # 3x1 matrix
+        self.biases = np.zeros((1, 1))  # all biases, 1 for each output neuron - here only 1
         self.alpha = alpha  # learning rate of neural network
 
     def train(self, X, y, iterations=100000):
         print("Starting NN training")
         for iteration in range(iterations):
             # Pass training set through network
-            #output = self._feedForward(X)
             output = self.classify(X)
 
-            # Calculate the error of each neuron
+            # Calculate the error rate
             error = y - output
+            if NeuralNetwork.DEBUG:
+                if iteration % 10000 == 0:
+                    print(f"On iteration number {iteration}, error = {error}")
 
             # Multiply error ny input and gradient of activation function
             # Because of the gradient, more significant weights are adjusted more
-            adjustments = np.dot(X.T, error * self._SigmoidDerivative(output))
-            #print(f"adjustments: {adjustments}")
-            # Adjust the weights
-            self.weights = self.weights + adjustments
+            adjustments = self.alpha * np.dot(X.T, np.multiply(error, self._SigmoidDerivative(output)))
 
-            if iteration % 10000 == 0:
-                print(f"On iteration number {iteration}, error = {error}")
+            # Adjust the weights
+            self.weights += adjustments
 
 
     # To niepotrzebne w sumie, chyba że trenowanie będzie trwało 50 godzin to może lepiej wtedy zaimplementować
     def saveNetworkParameters(self, fileName='nn_parameters'):
-        print(f'Saving neural network parameters to file {fileName}')
+        print(f'Saving neural network parame ers to file {fileName}')
 
     # To niepotrzebne w sumie, chyba że trenowanie będzie trwało 50 godzin to może lepiej wtedy zaimplementować
     def loadNetworkParameters(self, fileName='nn_parameters'):
@@ -103,13 +106,12 @@ class NeuralNetwork:
 
     def classify(self, inputData):
         activations = self._feedForward(inputData)
-        return np.sum(activations, axis=1, keepdims=True)
+        return activations
 
     def _feedForward(self, inputData):
-        inputData = inputData.astype(float)
-        activation = self._SigmoidActivation(np.dot(inputData, self.weights))
-        #activation = self._SoftmaxActivation(activation)
-        return activation
+        output = self._SigmoidActivation(np.dot(inputData, self.weights))
+        #output = self._ReLuActivation(np.dot(inputData, self.weights)) #  works far worse in 1 layer case, will probably be superior when working with more
+        return output
 
     def _backPropagate(self):
         pass
@@ -118,12 +120,10 @@ class NeuralNetwork:
         return np.maximum(0, x)
 
     def _SigmoidActivation(self, x):
-        output = 1 / (1 + np.exp(-x))
-        return output
+        return 1 / (1 + np.exp(-x))
 
     def _SigmoidDerivative(self, x):
-        output = x * (1 - x)
-        return output
+        return x * (1 - x)
 
     def _SoftmaxActivation(self, x):
         expValues = np.exp(x - np.max(x, axis=1, keepdims=True))
@@ -143,10 +143,16 @@ class NeuralNetwork:
 #         self.bias = 0.1
 
 
-RELEASE_VERSION = 0
-KL_TEST_VERSION = 1
+def prettyPrintResults(expectedOutput, NNOutput):
+    for output_sample in range(min(len(expectedOutput), len(NNOutput))):
+        print(f"Test sample {output_sample}:\nExpected output: {expectedOutput[output_sample]} NN output: {NNOutput[output_sample]}")
+    print() # newline
+
+RELEASE_VERSION = False
+KL_TEST_VERSION = True
 
 if __name__ == '__main__':
+
     if RELEASE_VERSION:
         print('Starting intelligent radio')
         radioIntelligence = NeuralNetwork()
@@ -162,28 +168,39 @@ if __name__ == '__main__':
         print("Starting KL part test")
 
         def test_1_layer_nn():
-            print("Testing NN with 3 inputs and 1 output - for example XOR can be the function for NN to learn")
-            trainingX = np.array([ [0, 0, 0],
-                                   [0, 0, 1],
-                                   [0, 1, 0],
-                                   [0, 1, 1],
-                                   [1, 0, 0],
-                                   [1, 0, 1],
-                                   [1, 1, 0],
-                                   [1, 1, 1] ])
-            trainingy = np.array([[0, 1, 1, 0, 1, 0, 0, 1]]).T
-            testNn = NeuralNetwork()
+            print("Testing NN with 4 inputs and 1 output. We want NN to output 1 whenever the rightmost of 4 input bits is 1")
+            # For some reason there is problem when trying to make NN learn XOR:
+            # http://home.agh.edu.pl/~vlsi/AI/xor_t/en/main.html
+
+            trainingX = np.array([ [0, 0, 0, 0],
+                                   [0, 0, 1, 1],  # this outputs 1
+                                   [0, 1, 0, 1],  # and this
+                                   [0, 1, 1, 0],
+                                   [1, 0, 0, 1],  # and this
+                                   [1, 0, 1, 0],
+                                   [1, 1, 0, 0],
+                                   [1, 1, 1, 0] ])
+            trainingy = np.array([[0, 1, 1, 0, 1, 0, 0, 0]]).T
+
+            testNn = NeuralNetwork(alpha=0.5)
             print(f"Weights at the beginning: {testNn.weights}")
             output = testNn.classify(trainingX)
-            print(f"Before training got output:\n{output}")
-            print(trainingy == output)
+            prettyPrintResults(trainingy, output)
 
             testNn.train(trainingX, trainingy, iterations=100000)
             print(f"Weights after training: {testNn.weights}")
             output = testNn.classify(trainingX)
-            print(f"After training got output:\n{output}")
-            print(trainingy == output)
+            prettyPrintResults(trainingy, output)
 
+            testX = np.array([[0, 0, 0, 1],
+                              [1, 0, 1, 0],
+                              [0, 0, 0, 1],
+                              [0, 0, 0, 1],
+                              [0, 0, 1, 0],
+                              [0, 0, 0, 1]])
+            testy = np.array([[1, 0, 1, 1, 0, 1]]).T
+            output = testNn.classify(testX)
+            prettyPrintResults(testy, output)
         test_1_layer_nn()
 
 
