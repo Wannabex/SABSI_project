@@ -61,40 +61,73 @@ class IntelligentRadio:
         pass
 
 
-
-
-
 class NeuralNetwork:
-    DEBUG = True
-    def __init__(self, noLayers=4, alpha=0.1):
-        np.random.seed(1)
-        # inputLayer = NeuronsLayer()
-        # hiddenLayer1 = NeuronsLayer()
-        # inputLayer2 = NeuronsLayer()
-        # outputLayer = NeuronsLayer()
-        self.weights = 2 * np.random.random((4, 1)) - 1  # 3x1 matrix
-        self.biases = np.zeros((1, 1))  # all biases, 1 for each output neuron - here only 1
-        self.alpha = alpha  # learning rate of neural network
+    # implementation based on https://www.pyimagesearch.com/2021/05/06/backpropagation-from-scratch-with-python/
 
-    def train(self, X, y, iterations=100000):
+    DEBUG = True
+
+    def __init__(self, layers):
+        np.random.seed(1)
+
+        self.weights = []
+        self.layers = layers  # List of ints representing network's architecture
+
+
+
+        for i in range(len(layers) - 2):
+            w = np.random.randn(layers[i] + 1, layers[i+1] + 1)  # MxN matrix that connects every node in current layer to every node in next layer
+            self.weights.append(w / np.sqrt(layers[i]))  # normalization of variance of each neuron's output
+
+        # the last two layers are a special case where the input
+        # connections need a bias term but the output does not
+        w = np.random.randn(layers[-2] + 1, layers[-1])
+        self.weights.append(w / np.sqrt(layers[-2]))
+
+    def train(self, X, y, iterations=100000, alpha=0.2):
         print("Starting NN training")
+        X = np.c_[X, np.ones((X.shape[0]))]  # c_ joins slice objects to concatenation along the second axis
+        #  we do that concatenation because we want to insert column of 1's as biases
         for iteration in range(iterations):
+
             # Pass training set through network
-            output = self.classify(X)
+            output = self.classify(X, addBias=False)
+
+            for (x, target) in zip(X, y):  # zip joins X and y into tuple
+                self._trainPartial(x, target, alpha)  # train partial works on every individual sample in X, y separately
 
             # Calculate the error rate
             error = y - output
             if NeuralNetwork.DEBUG:
                 if iteration % 10000 == 0:
-                    print(f"On iteration number {iteration}, error = {error}")
+                    print(f"On iteration number {iteration}, loss = {self._calculateLoss(X, y)}")
 
-            # Multiply error ny input and gradient of activation function
-            # Because of the gradient, more significant weights are adjusted more
-            adjustments = self.alpha * np.dot(X.T, np.multiply(error, self._SigmoidDerivative(output)))
+    def _trainPartial(self, x, y, alpha):
+        activations = [np.atleast_2d(x)]
+        # feed forward here
+        for layer in range(len(self.weights)):
+            net = activations[layer].dot(self.weights[layer])
+            activations.append(self._SigmoidActivation(net))
 
-            # Adjust the weights
-            self.weights += adjustments
+        # back propagate here
+        error = activations[-1] - y  # activations[-1] is the last layer - output
+        deltas = [error * self._SigmoidDerivative(activations[-1])]
+        for layer in range(len(activations) - 2, 0, -1):
+            delta = deltas[-1].dot(self.weights[layer].T)
+            delta = delta * self._SigmoidDerivative(activations[layer])
+            deltas.append(delta)
+        deltas = deltas[::-1]  # reverse this list
 
+        # weights update
+        for layer in range(len(self.weights)):
+            self.weights[layer] += -alpha * activations[layer].T.dot(deltas[layer])
+
+
+    def _calculateLoss(self, X, y):
+        y = np.atleast_2d(y)
+        classifications = self.classify(X, addBias=False)
+        loss = 0.5 * np.sum((classifications - y) ** 2)
+        
+        return loss
 
     # To niepotrzebne w sumie, chyba że trenowanie będzie trwało 50 godzin to może lepiej wtedy zaimplementować
     def saveNetworkParameters(self, fileName='nn_parameters'):
@@ -104,9 +137,14 @@ class NeuralNetwork:
     def loadNetworkParameters(self, fileName='nn_parameters'):
         print(f'Loading neural network parameters from file {fileName}')
 
-    def classify(self, inputData):
-        activations = self._feedForward(inputData)
-        return activations
+    def classify(self, inputData, addBias=True):
+        classification = np.atleast_2d(inputData)
+        if addBias:
+            classification = np.c_[classification, np.ones((classification.shape[0]))]
+
+        for layer in range(len(self.weights)):
+            classification = self._SigmoidActivation(np.dot(classification, self.weights[layer]))
+        return classification
 
     def _feedForward(self, inputData):
         output = self._SigmoidActivation(np.dot(inputData, self.weights))
@@ -167,7 +205,7 @@ if __name__ == '__main__':
     elif KL_TEST_VERSION:
         print("Starting KL part test")
 
-        def test_1_layer_nn():
+        def test1_simple_one_layer_nn():
             print("Testing NN with 4 inputs and 1 output. We want NN to output 1 whenever the rightmost of 4 input bits is 1")
             # For some reason there is problem when trying to make NN learn XOR:
             # http://home.agh.edu.pl/~vlsi/AI/xor_t/en/main.html
@@ -182,14 +220,14 @@ if __name__ == '__main__':
                                    [1, 1, 1, 0] ])
             trainingy = np.array([[0, 1, 1, 0, 1, 0, 0, 0]]).T
 
-            testNn = NeuralNetwork(alpha=0.5)
-            print(f"Weights at the beginning: {testNn.weights}")
-            output = testNn.classify(trainingX)
+            testNN = NeuralNetwork()
+            print(f"Weights at the beginning: {testNN.weights}")
+            output = testNN.classify(trainingX)
             prettyPrintResults(trainingy, output)
 
-            testNn.train(trainingX, trainingy, iterations=100000)
-            print(f"Weights after training: {testNn.weights}")
-            output = testNn.classify(trainingX)
+            testNN.train(trainingX, trainingy, iterations=100000, alpha=0.5)
+            print(f"Weights after training: {testNN.weights}")
+            output = testNN.classify(trainingX)
             prettyPrintResults(trainingy, output)
 
             testX = np.array([[0, 0, 0, 1],
@@ -199,9 +237,29 @@ if __name__ == '__main__':
                               [0, 0, 1, 0],
                               [0, 0, 0, 1]])
             testy = np.array([[1, 0, 1, 1, 0, 1]]).T
-            output = testNn.classify(testX)
+            output = testNN.classify(testX)
             prettyPrintResults(testy, output)
-        test_1_layer_nn()
+
+        def test2_parametrized_w_hidden_layer_nn():
+            trainingX = np.array([[0, 0, 0],
+                                  [0, 0, 1],
+                                  [0, 1, 0],
+                                  [0, 1, 1],
+                                  [1, 0, 0],
+                                  [1, 0, 1],
+                                  [1, 1, 0],
+                                  [1, 1, 1]])
+            trainingy = np.array([[0, 1, 1, 0, 1, 0, 0, 1]]).T
+
+            testNN = NeuralNetwork([3, 4, 1])
+            testNN.train(trainingX, trainingy, iterations=30001)
+
+            output = testNN.classify(trainingX)
+            prettyPrintResults(trainingy, output)
+
+
+        #test1_simple_one_layer_nn()
+        test2_parametrized_w_hidden_layer_nn()
 
 
 
