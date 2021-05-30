@@ -183,8 +183,8 @@ class NeuralNetwork:
 
 def prettyPrintResults(expectedOutput, NNOutput):
     for output_sample in range(min(len(expectedOutput), len(NNOutput))):
-        print(f"Test sample {output_sample}:\nExpected output: {expectedOutput[output_sample]} NN output: {NNOutput[output_sample]}")
-    print() # newline
+        print(f"Test sample {output_sample+1}:\nExpected output: {expectedOutput[output_sample]} NN output: {NNOutput[output_sample]}")
+    print()  # newline
 
 RELEASE_VERSION = False
 KL_TEST_VERSION = True
@@ -206,7 +206,7 @@ if __name__ == '__main__':
         print("Starting KL part test")
 
         def test1_simple_one_layer_nn():
-            print("Testing NN with 4 inputs and 1 output. We want NN to output 1 whenever the rightmost of 4 input bits is 1")
+            print("\nTesting NN with 4 inputs and 1 output. We want NN to output 1 whenever the rightmost of 4 input bits is 1.\n")
             # For some reason there is problem when trying to make NN learn XOR:
             # http://home.agh.edu.pl/~vlsi/AI/xor_t/en/main.html
 
@@ -220,7 +220,7 @@ if __name__ == '__main__':
                                    [1, 1, 1, 0] ])
             trainingy = np.array([[0, 1, 1, 0, 1, 0, 0, 0]]).T
 
-            testNN = NeuralNetwork()
+            testNN = NeuralNetwork([4, 1])
             print(f"Weights at the beginning: {testNN.weights}")
             output = testNN.classify(trainingX)
             prettyPrintResults(trainingy, output)
@@ -241,6 +241,7 @@ if __name__ == '__main__':
             prettyPrintResults(testy, output)
 
         def test2_parametrized_w_hidden_layer_nn():
+            print("\nTesting neural network number 1 - infamous 3 input XOR which so horribly failed to be trained to 1-layer NN in test 1.\n")
             trainingX = np.array([[0, 0, 0],
                                   [0, 0, 1],
                                   [0, 1, 0],
@@ -256,10 +257,33 @@ if __name__ == '__main__':
 
             output = testNN.classify(trainingX)
             prettyPrintResults(trainingy, output)
+            del testNN
+            print("\nTesting neural network number 2 - the same function which worked in test 1.\n")
+            trainingX = np.array([[0, 0, 0, 0],
+                                  [0, 0, 1, 1],  # this outputs 1
+                                  [0, 1, 0, 1],  # and this
+                                  [0, 1, 1, 0],
+                                  [1, 0, 0, 1],  # and this
+                                  [1, 0, 1, 0],
+                                  [1, 1, 0, 0],
+                                  [1, 1, 1, 0]])
+            trainingy = np.array([[0, 1, 1, 0, 1, 0, 0, 0]]).T
 
+            testNN = NeuralNetwork([4, 3, 4, 1])
+            testNN.train(trainingX, trainingy, iterations=30001)
 
-        #test1_simple_one_layer_nn()
-        test2_parametrized_w_hidden_layer_nn()
+            testX = np.array([[0, 0, 0, 1],
+                              [1, 0, 1, 0],
+                              [0, 0, 0, 1],
+                              [0, 0, 0, 1],
+                              [0, 0, 1, 0],
+                              [0, 0, 0, 1]])
+            testy = np.array([[1, 0, 1, 1, 0, 1]]).T
+            output = testNN.classify(testX)
+            prettyPrintResults(testy, output)
+
+        test1_simple_one_layer_nn()
+        #test2_parametrized_w_hidden_layer_nn()
 
 
 
