@@ -63,8 +63,6 @@ class IntelligentRadio:
 
 class NeuralNetwork:
     # implementation based on https://www.pyimagesearch.com/2021/05/06/backpropagation-from-scratch-with-python/
-    DEBUG = True
-
     def __init__(self, layers):
         np.random.seed(1)
         self.weights = []
@@ -79,7 +77,7 @@ class NeuralNetwork:
         w = np.random.randn(layers[-2] + 1, layers[-1])
         self.weights.append(w / np.sqrt(layers[-2]))
 
-    def train(self, X, y, iterations=100000, alpha=0.2):
+    def train(self, X, y, alpha=0.2, iterations=100000, displayUpdate=1000):
         print("Starting NN training")
         X = np.c_[X, np.ones((X.shape[0]))]  # c_ joins slice objects to concatenation along the second axis
         # here we use it insert column of 1s - which is our bias. This approach will make it trainable parameter
@@ -89,17 +87,13 @@ class NeuralNetwork:
             for (X_sample, target) in zip(X, y):  # zip joins X and y into tuples
                 self._trainPartial(X_sample, target, alpha)  # train partial works on every individual sample in X, y. One by one these are passed as (X_sample, target) tuples.
 
-            if NeuralNetwork.DEBUG:
-                if iteration % 10000 == 0:
-                    print(f"On iteration number {iteration}, loss = {self._calculateLoss(X, y)}")
+            if iteration % displayUpdate == 0:
+                print(f"On iteration number {iteration}, loss = {self._calculateLoss(X, y)}")
 
     def _trainPartial(self, x, y, alpha):
         x = np.array(x, ndmin=2)  # transform x into matrix
-
         activations = self._feedForward(x)
-
         deltas = self._backPropagate(activations, y)
-
         # weights update
         for layer in range(len(self.weights)):
             self.weights[layer] += -alpha * activations[layer].T.dot(deltas[layer])
@@ -154,29 +148,17 @@ class NeuralNetwork:
     def loadNetworkParameters(self, fileName='nn_parameters'):
         print(f'Loading neural network parameters from file {fileName}')
 
-#
-# class NeuronsLayer:
-#     def __init__(self, noNeurons):
-#         pass
-#
-#
-# # możliwe że nie będzie potrzebne, albo że za bardzo wszystko utrudni
-# class Neuron:
-#     def __init__(self):
-#         self.weight = 0.5 # random
-#         self.bias = 0.1
-
 
 def prettyPrintResults(expectedOutput, NNOutput):
     for output_sample in range(min(len(expectedOutput), len(NNOutput))):
         print(f"Test sample {output_sample+1}:\nExpected output: {expectedOutput[output_sample]} NN output: {NNOutput[output_sample]}")
     print()  # newline
 
+
 RELEASE_VERSION = False
 KL_TEST_VERSION = True
 
 if __name__ == '__main__':
-
     if RELEASE_VERSION:
         print('Starting intelligent radio')
         radioIntelligence = NeuralNetwork()
@@ -212,7 +194,7 @@ if __name__ == '__main__':
             output = testNN.classify(trainingX)
             prettyPrintResults(trainingy, output)
 
-            testNN.train(trainingX, trainingy, iterations=100000, alpha=0.5)
+            testNN.train(trainingX, trainingy, alpha=0.5, iterations=100000, displayUpdate=10000)
             print(f"Weights after training: {testNN.weights}")
             output = testNN.classify(trainingX)
             prettyPrintResults(trainingy, output)
@@ -241,7 +223,7 @@ if __name__ == '__main__':
             trainingy = np.array([[0, 1, 1, 0, 1, 0, 0, 1]]).T
 
             testNN = NeuralNetwork([len(trainingX[0]), 4, 1])
-            testNN.train(trainingX, trainingy, iterations=30001)
+            testNN.train(trainingX, trainingy, iterations=30001, displayUpdate=10000)
 
             output = testNN.classify(trainingX)
             prettyPrintResults(trainingy, output)
@@ -258,7 +240,7 @@ if __name__ == '__main__':
             trainingy = np.array([[0, 1, 1, 0, 1, 0, 0, 0]]).T
 
             testNN = NeuralNetwork([len(trainingX[0]), 3, 4, 1])
-            testNN.train(trainingX, trainingy, iterations=30001)
+            testNN.train(trainingX, trainingy, iterations=30001, displayUpdate=10000)
 
             testX = np.array([[0, 0, 0, 1],
                               [1, 0, 1, 0],
@@ -272,12 +254,35 @@ if __name__ == '__main__':
 
         def test3_MNIST_classification_nn():
             print(f"\nStarting test3 - {test3_MNIST_classification_nn.__name__}")
-            print("\n Testing neural network number 3 - MNIST dataset with much larger NN than all the previous times.\n")
-            from sklearn.model_selection import train_test_split
+            print("\nTesting neural network number 3 - MNIST dataset with much larger NN than all the previous times.\n")
             from sklearn import datasets
+            from sklearn.model_selection import train_test_split
+            from sklearn.preprocessing import LabelBinarizer
+            from sklearn.metrics import classification_report
 
-            digits = datasets.load_digits  # load MNIST dataset
+            # load the MNIST dataset and apply min/max scaling to scale the
+            # pixel intensity values to the range [0, 1] (each image is
+            # represented by an 8 x 8 = 64-dim feature vector)
+            digits = datasets.load_digits()  # load MNIST dataset
+            data = digits.data.astype("float")
+            data = (data - data.min()) / (data.max() - data.min())
+            print("[INFO] samples: {}, dim: {}".format(data.shape[0], data.shape[1]))
 
+            # convert the labels from integers to vectors
+            (trainX, testX, trainY, testY) = train_test_split(data, digits.target, test_size=0.25)
+
+            # convert the labels from integers to vectors
+            trainY = LabelBinarizer().fit_transform(trainY)
+            testY = LabelBinarizer().fit_transform(testY)
+
+            testNN = NeuralNetwork([trainX.shape[1], 32, 16, 10])  # 10 outputs is necessary for every digit
+            print("[INFO] training network...")
+            testNN.train(trainX, trainY, iterations=1000, displayUpdate=100)
+
+            print("[INFO] evaluating network...")
+            classifications = testNN.classify(testX)
+            classifications = classifications.argmax(axis=1)  # argmax finds class classification with the greatest node output value
+            print(classification_report(testY.argmax(axis=1), classifications))
 
         test1_simple_one_layer_nn()
         test2_parametrized_w_hidden_layer_nn()
