@@ -35,7 +35,10 @@ OK 3. Przygotowanie frontendu i klasy radia czyli umożliwienie włączania muzy
 """
 
 import numpy as np  # for better representation of data and to simplify mathematical operations that happen between neurons
+import json
 
+
+JSON_PATH = "./data_short.json"
 
 class IntelligentRadio:
     POP = 0
@@ -249,6 +252,7 @@ if __name__ == '__main__':
                               [0, 0, 1, 0],
                               [0, 0, 0, 1]])
             testy = np.array([[1, 0, 1, 1, 0, 1]]).T
+            print (testX)
             output = testNN.classify(testX)
             prettyPrintResults(testy, output)
 
@@ -284,9 +288,28 @@ if __name__ == '__main__':
             classifications = classifications.argmax(axis=1)  # argmax finds class classification with the greatest node output value
             print(classification_report(testY.argmax(axis=1), classifications))
 
-        test1_simple_one_layer_nn()
-        test2_parametrized_w_hidden_layer_nn()
-        test3_MNIST_classification_nn()
+        def test4_music_classification():
+            print(f"\nStarting test4 - {test4_music_classification.__name__}")
+            print("Training NN to recognize genre, then verifying with one song.\n")
+
+            with open(JSON_PATH, "r") as fp:
+              data = json.load(fp)
+
+            # convert lists to numpy arrays
+            trainingMfcc = np.array(data["mfcc"])
+            trainingLabels = np.array(data["labels"])
+            trainingMfccFlat = trainingMfcc.flatten()
+
+            testNN = NeuralNetwork([len(trainingMfccFlat[0]), 4, 1])
+            testNN.train(trainingMfccFlat, trainingLabels, iterations=30001, displayUpdate=10000)
+
+            output = testNN.classify(trainingMfccFlat)
+            prettyPrintResults(trainingLabels, output)
+
+        #test1_simple_one_layer_nn()
+        #test2_parametrized_w_hidden_layer_nn()
+        #test3_MNIST_classification_nn()
+        test4_music_classification()
 
 
 
