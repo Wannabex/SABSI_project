@@ -38,7 +38,7 @@ import numpy as np  # for better representation of data and to simplify mathemat
 import json
 
 
-JSON_PATH = "./data_short.json"
+JSON_PATH = "./data_original.json"
 
 class IntelligentRadio:
     POP = 0
@@ -297,11 +297,14 @@ if __name__ == '__main__':
 
             # convert lists to numpy arrays
             trainingMfcc = np.array(data["mfcc"])
+            trainingMfccFlat = trainingMfcc.reshape((trainingMfcc.shape[0], trainingMfcc.shape[1]*trainingMfcc.shape[2]))
             trainingLabels = np.array(data["labels"])
-            trainingMfccFlat = trainingMfcc.flatten()
-
-            testNN = NeuralNetwork([len(trainingMfccFlat[0]), 4, 1])
-            testNN.train(trainingMfccFlat, trainingLabels, iterations=30001, displayUpdate=10000)
+            #trainingMfccFlat = trainingMfcc.flatten()
+            print(trainingMfcc.shape)
+            print(trainingMfccFlat.shape)
+            print(trainingLabels.shape)
+            testNN = NeuralNetwork([len(trainingMfccFlat[0]), 512, 256, 64, 10])
+            testNN.train(trainingMfccFlat, trainingLabels, alpha=0.0001, iterations=50, displayUpdate=1,)
 
             output = testNN.classify(trainingMfccFlat)
             prettyPrintResults(trainingLabels, output)
