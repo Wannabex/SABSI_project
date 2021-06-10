@@ -80,18 +80,39 @@ class NeuralNetwork:
         w = np.random.randn(layers[-2] + 1, layers[-1])
         self.weights.append(w / np.sqrt(layers[-2]))
 
-    def train(self, X, y, alpha=0.2, iterations=100000, displayUpdate=1000):
+    def train(self, X, y, alpha=0.2, iterations=100000, displayUpdate=1000, batchSize=32):
         print("Starting NN training")
         X = np.c_[X, np.ones((X.shape[0]))]  # c_ joins slice objects to concatenation along the second axis
         # here we use it insert column of 1s - which is our bias. This approach will make it trainable parameter
-
         #  we do that concatenation because we want to insert column of 1's as biases
+
+        noBatches = X.shape[0] // batchSize
+        lastBatchSize = X.shape[0] % batchSize
+
         for iteration in range(iterations):
-            for (X_sample, target) in zip(X, y):  # zip joins X and y into tuples
-                self._trainPartial(X_sample, target, alpha)  # train partial works on every individual sample in X, y. One by one these are passed as (X_sample, target) tuples.
+            for currentBatch in range(0, noBatches):
+                XBatch = X[currentBatch*batchSize:currentBatch*batchSize+batchSize]
+                yBatch = y[currentBatch*batchSize:currentBatch*batchSize+batchSize]
+
+                for (X_sample, target) in zip(XBatch, yBatch):  # zip joins X and y into tuples
+                    self._trainPartial(X_sample, target,
+                                       alpha)  # train partial works on every individual sample in X, y. One by one these are passed as (X_sample, target) tuples.
+
+            XLastBatch = X[X.shape[0]-lastBatchSize:]
+            yLastBatch = y[y.shape[0]-lastBatchSize:]
+            for (X_sample, target) in zip(XLastBatch, yLastBatch):  # zip joins X and y into tuples
+                self._trainPartial(X_sample, target,
+                                   alpha)  # train partial works on every individual sample in X, y. One by one these are passed as (X_sample, target) tuples.
 
             if iteration % displayUpdate == 0:
                 print(f"On iteration number {iteration}, loss = {self._calculateLoss(X, y)}")
+
+
+            # for (X_sample, target) in zip(X, y):  # zip joins X and y into tuples
+            #     self._trainPartial(X_sample, target, alpha)  # train partial works on every individual sample in X, y. One by one these are passed as (X_sample, target) tuples.
+            #
+            # if iteration % displayUpdate == 0:
+            #     print(f"On iteration number {iteration}, loss = {self._calculateLoss(X, y)}")
 
     def _trainPartial(self, x, y, alpha):
         x = np.array(x, ndmin=2)  # transform x into matrix
@@ -285,6 +306,7 @@ if __name__ == '__main__':
 
             print("[INFO] evaluating network...")
             classifications = testNN.classify(testX)
+            prettyPrintResults(testY, classifications)
             classifications = classifications.argmax(axis=1)  # argmax finds class classification with the greatest node output value
             print(classification_report(testY.argmax(axis=1), classifications))
 
@@ -303,11 +325,22 @@ if __name__ == '__main__':
             print(trainingMfcc.shape)
             print(trainingMfccFlat.shape)
             print(trainingLabels.shape)
-            testNN = NeuralNetwork([len(trainingMfccFlat[0]), 512, 256, 64, 10])
-            testNN.train(trainingMfccFlat, trainingLabels, alpha=0.0001, iterations=50, displayUpdate=1,)
 
-            output = testNN.classify(trainingMfccFlat)
-            prettyPrintResults(trainingLabels, output)
+            # testNN = NeuralNetwork([len(trainingMfccFlat[0]), 512, 256, 64, 10])
+            testNN = NeuralNetwork([len(trainingMfccFlat[0]), 512, 155, 64, 10])
+            testNN.train(trainingMfccFlat, trainingLabels, alpha=0.00001, iterations=20, displayUpdate=1)
+
+            testMfcc = [trainingMfccFlat[0], trainingMfccFlat[2100], trainingMfccFlat[3700], trainingMfccFlat[5500]]
+            testMfcc = np.array(testMfcc)
+            testLabels = [trainingLabels[0], trainingLabels[2100], trainingLabels[3700], trainingLabels[5500]]
+            testLabels = np.array(testLabels)
+            output = testNN.classify(testMfcc)
+            prettyPrintResults(testLabels, output)
+
+            # output = testNN.classify(trainingMfccFlat)
+            # prettyPrintResults(trainingLabels, output)
+
+
 
         #test1_simple_one_layer_nn()
         #test2_parametrized_w_hidden_layer_nn()
