@@ -14,6 +14,7 @@ II. Implementacja sieci neuronowej i jej algorytmów
 III. Muzyczka
 
 *https://www.kaggle.com/andradaolteanu/gtzan-dataset-music-genre-classification
+`UWAGA - usunąć plik .\genres_original\jazz\jazz.00054.wav bo uszkodzony`
 
 PROBLEMY:
 

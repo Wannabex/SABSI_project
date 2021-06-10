@@ -159,7 +159,7 @@ def prettyPrintResults(expectedOutput, NNOutput):
 
 
 RELEASE_VERSION = False
-KL_TEST_VERSION = True
+RUN_TESTS = True
 
 if __name__ == '__main__':
     if RELEASE_VERSION:
@@ -173,8 +173,8 @@ if __name__ == '__main__':
         radyjko.classifyAndPlay(wantedSongName)
         print('Turning off the radio')
 
-    elif KL_TEST_VERSION:
-        print("Starting KL part test")
+    if RUN_TESTS:
+        print("Starting tests")
 
         def test1_simple_one_layer_nn():
             print(f"\nStarting test1 - {test1_simple_one_layer_nn.__name__}")
