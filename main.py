@@ -80,7 +80,7 @@ class NeuralNetwork:
         w = np.random.randn(layers[-2] + 1, layers[-1])
         self.weights.append(w / np.sqrt(layers[-2]))
 
-    def train(self, X, y, alpha=0.1, iterations=100000, displayUpdate=1000, batchSize=32):
+    def train(self, X, y, learningRate=0.1, iterations=100000, displayUpdate=1000, batchSize=32):
         print("Starting NN training")
         X = np.c_[X, np.ones((X.shape[0]))]  # c_ joins slice objects to concatenation along the second axis
         # here we use it insert column of 1s - which is our bias. This approach will make it trainable parameter
@@ -90,47 +90,47 @@ class NeuralNetwork:
         lastBatchSize = X.shape[0] % batchSize
 
         for iteration in range(iterations):
-            for currentBatch in range(0, noBatches):
-                XBatch = X[currentBatch*batchSize:currentBatch*batchSize+batchSize]
-                yBatch = y[currentBatch*batchSize:currentBatch*batchSize+batchSize]
-
-                for (X_sample, target) in zip(XBatch, yBatch):  # zip joins X and y into tuples
-                    self._trainPartial(X_sample, target,
-                                       alpha)  # train partial works on every individual sample in X, y. One by one these are passed as (X_sample, target) tuples.
-
-            XLastBatch = X[X.shape[0]-lastBatchSize:]
-            yLastBatch = y[y.shape[0]-lastBatchSize:]
-            for (X_sample, target) in zip(XLastBatch, yLastBatch):  # zip joins X and y into tuples
-                self._trainPartial(X_sample, target,
-                                   alpha)  # train partial works on every individual sample in X, y. One by one these are passed as (X_sample, target) tuples.
-
-            if iteration % displayUpdate == 0:
-                print(f"On iteration number {iteration}, loss = {self._calculateLoss(X, y)}")
-
-
-            # for (X_sample, target) in zip(X, y):  # zip joins X and y into tuples
-            #     self._trainPartial(X_sample, target, alpha)  # train partial works on every individual sample in X, y. One by one these are passed as (X_sample, target) tuples.
+            # for currentBatch in range(0, noBatches):
+            #     XBatch = X[currentBatch*batchSize:currentBatch*batchSize+batchSize]
+            #     yBatch = y[currentBatch*batchSize:currentBatch*batchSize+batchSize]
+            #
+            #     for (X_sample, target) in zip(XBatch, yBatch):  # zip joins X and y into tuples
+            #         self._trainPartial(X_sample, target,
+            #                            learningRate)  # train partial works on every individual sample in X, y. One by one these are passed as (X_sample, target) tuples.
+            #
+            # XLastBatch = X[X.shape[0]-lastBatchSize:]
+            # yLastBatch = y[y.shape[0]-lastBatchSize:]
+            # for (X_sample, target) in zip(XLastBatch, yLastBatch):  # zip joins X and y into tuples
+            #     self._trainPartial(X_sample, target,
+            #                        learningRate)  # train partial works on every individual sample in X, y. One by one these are passed as (X_sample, target) tuples.
             #
             # if iteration % displayUpdate == 0:
             #     print(f"On iteration number {iteration}, loss = {self._calculateLoss(X, y)}")
 
-    def _trainPartial(self, x, y, alpha):
+
+            for (X_sample, target) in zip(X, y):  # zip joins X and y into tuples
+                self._trainPartial(X_sample, target, learningRate)  # train partial works on every individual sample in X, y. One by one these are passed as (X_sample, target) tuples.
+
+            if iteration % displayUpdate == 0:
+                print(f"On iteration number {iteration}, loss = {self._calculateLoss(X, y)}")
+
+    def _trainPartial(self, x, y, learningRate):
         x = np.array(x, ndmin=2)  # transform x into matrix
         activations = self._feedForward(x)
         deltas = self._backPropagate(activations, y)
         # weights update
         for layer in range(len(self.weights)):
-            self.weights[layer] += -alpha * activations[layer].T.dot(deltas[layer])
+            self.weights[layer] += -learningRate * activations[layer].T.dot(deltas[layer])
 
     def _feedForward(self, input_layer):
-        layer_activations = [input_layer]
-        for layer in range(len(self.weights)):
-            current_layer_output = np.dot(layer_activations[layer], self.weights[layer])
-            layer_activations.append(self._SigmoidActivation(current_layer_output))
-            #layer_activations.append(self._ReLuActivation(current_layer_output))
-        # last_layer_output = np.dot(layer_activations[-1], self.weights[-1])
-        # layer_activations.append(self._SoftmaxActivation(last_layer_output))
-        return layer_activations
+        layers_activations = [input_layer]
+        for layer in range(len(self.weights)-1):
+            current_layer_output = np.dot(layers_activations[layer], self.weights[layer])
+            layers_activations.append(self._SigmoidActivation(current_layer_output))
+            #layers_activations.append(self._ReLuActivation(current_layer_output))
+        last_layer_output = np.dot(layers_activations[-1], self.weights[-1])
+        layers_activations.append(self._SoftmaxActivation(last_layer_output))
+        return layers_activations
 
     def _backPropagate(self, layers_activations, target_output):
         error = layers_activations[-1] - target_output  # activations[-1] is the last layer - output
@@ -154,10 +154,10 @@ class NeuralNetwork:
         if addBias:
             classification = np.c_[classification, np.ones((classification.shape[0]))]
 
-        for layer in range(len(self.weights)):
+        for layer in range(len(self.weights)-1):
             classification = self._SigmoidActivation(np.dot(classification, self.weights[layer]))
             #classification = self._ReLuActivation(np.dot(classification, self.weights[layer]))
-        #classification = self._SoftmaxActivation(np.dot(classification, self.weights[-1]))
+        classification = self._SoftmaxActivation(np.dot(classification, self.weights[-1]))
         return classification
 
     def _SigmoidActivation(self, x):
@@ -338,16 +338,16 @@ if __name__ == '__main__':
             print(trainingMfccFlat.shape)
             print(trainingLabels.shape)
 
-            testNN = NeuralNetwork([len(trainingMfccFlat[0]), 512, 256, 64, 10])
+            testNN = NeuralNetwork([len(trainingMfccFlat[0]), 1024, 512, 256, 64, 10])
 
             if JSON_PATH == "./data_original.json":
-                testNN.train(trainingMfccFlat, trainingLabels, alpha=0.001, iterations=10, displayUpdate=1)
+                testNN.train(trainingMfccFlat, trainingLabels, learningRate=0.001, iterations=10, displayUpdate=1)
                 testMfcc = [trainingMfccFlat[0], trainingMfccFlat[2100], trainingMfccFlat[3700], trainingMfccFlat[5500]]
                 testMfcc = np.array(testMfcc)
                 testLabels = [trainingLabels[0], trainingLabels[2100], trainingLabels[3700], trainingLabels[5500]]
                 testLabels = np.array(testLabels)
             elif JSON_PATH == "./data_short.json":
-                testNN.train(trainingMfccFlat, trainingLabels, alpha=0.01, iterations=100, displayUpdate=10)
+                testNN.train(trainingMfccFlat, trainingLabels, learningRate=0.01, iterations=200, displayUpdate=10)
                 testMfcc = [trainingMfccFlat[0], trainingMfccFlat[30], trainingMfccFlat[55], trainingMfccFlat[89]]
                 testMfcc = np.array(testMfcc)
                 testLabels = [trainingLabels[0], trainingLabels[30], trainingLabels[55], trainingLabels[89]]
@@ -361,10 +361,10 @@ if __name__ == '__main__':
 
 
 
-        test1_simple_one_layer_nn()
-        test2_parametrized_w_hidden_layer_nn()
+        #test1_simple_one_layer_nn()
+        #test2_parametrized_w_hidden_layer_nn()
         #test3_MNIST_classification_nn()
-        #test4_music_classification()
+        test4_music_classification()
 
 
 
