@@ -38,7 +38,7 @@ import numpy as np  # for better representation of data and to simplify mathemat
 import json
 
 
-JSON_PATH = "./data_original.json"
+JSON_PATH = "./data_short.json"
 
 class IntelligentRadio:
     POP = 0
@@ -80,7 +80,7 @@ class NeuralNetwork:
         w = np.random.randn(layers[-2] + 1, layers[-1])
         self.weights.append(w / np.sqrt(layers[-2]))
 
-    def train(self, X, y, alpha=0.2, iterations=100000, displayUpdate=1000, batchSize=32):
+    def train(self, X, y, alpha=0.1, iterations=100000, displayUpdate=1000, batchSize=32):
         print("Starting NN training")
         X = np.c_[X, np.ones((X.shape[0]))]  # c_ joins slice objects to concatenation along the second axis
         # here we use it insert column of 1s - which is our bias. This approach will make it trainable parameter
@@ -127,14 +127,19 @@ class NeuralNetwork:
         for layer in range(len(self.weights)):
             current_layer_output = np.dot(layer_activations[layer], self.weights[layer])
             layer_activations.append(self._SigmoidActivation(current_layer_output))
+            #layer_activations.append(self._ReLuActivation(current_layer_output))
+        # last_layer_output = np.dot(layer_activations[-1], self.weights[-1])
+        # layer_activations.append(self._SoftmaxActivation(last_layer_output))
         return layer_activations
 
     def _backPropagate(self, layers_activations, target_output):
         error = layers_activations[-1] - target_output  # activations[-1] is the last layer - output
         deltas = [error * self._SigmoidDerivative(layers_activations[-1])]
+        #deltas = [error * self._ReLuDerivative(layers_activations[-1])]
         for layer in range(len(layers_activations) - 2, 0, -1):  # moving back in the loop, hence the name
             delta = np.dot(deltas[-1], self.weights[layer].T)
             delta = delta * self._SigmoidDerivative(layers_activations[layer])
+            #delta = delta * self._ReLuDerivative(layers_activations[layer])
             deltas.append(delta)
         return deltas[::-1]  # reverse this list before returning
 
@@ -151,6 +156,8 @@ class NeuralNetwork:
 
         for layer in range(len(self.weights)):
             classification = self._SigmoidActivation(np.dot(classification, self.weights[layer]))
+            #classification = self._ReLuActivation(np.dot(classification, self.weights[layer]))
+        #classification = self._SoftmaxActivation(np.dot(classification, self.weights[-1]))
         return classification
 
     def _SigmoidActivation(self, x):
@@ -159,9 +166,15 @@ class NeuralNetwork:
     def _SigmoidDerivative(self, x):
         return x * (1 - x)
 
+    def _ReLuActivation(self, x):
+        return np.maximum(0, x)
+
+    def _ReLuDerivative(self, x):
+        return 1.0 * (x > 0)
+
     def _SoftmaxActivation(self, x):
-        expValues = np.exp(x - np.max(x, axis=1, keepdims=True))
-        output = expValues / np.sum(expValues, axis=1, keepdims=True)
+        expValues = np.exp(x - np.max(x))
+        output = expValues / np.sum(expValues)
         return output
 
     # To niepotrzebne w sumie, chyba że trenowanie będzie trwało 50 godzin to może lepiej wtedy zaimplementować
@@ -218,7 +231,7 @@ if __name__ == '__main__':
             output = testNN.classify(trainingX)
             prettyPrintResults(trainingy, output)
 
-            testNN.train(trainingX, trainingy, alpha=0.5, iterations=100000, displayUpdate=10000)
+            testNN.train(trainingX, trainingy, iterations=100000, displayUpdate=10000)
             print(f"Weights after training: {testNN.weights}")
             output = testNN.classify(trainingX)
             prettyPrintResults(trainingy, output)
@@ -307,8 +320,8 @@ if __name__ == '__main__':
             print("[INFO] evaluating network...")
             classifications = testNN.classify(testX)
             prettyPrintResults(testY, classifications)
-            classifications = classifications.argmax(axis=1)  # argmax finds class classification with the greatest node output value
-            print(classification_report(testY.argmax(axis=1), classifications))
+            #classifications = classifications.argmax(axis=1)  # argmax finds class classification with the greatest node output value
+            #print(classification_report(testY.argmax(axis=1), classifications))
 
         def test4_music_classification():
             print(f"\nStarting test4 - {test4_music_classification.__name__}")
@@ -321,19 +334,25 @@ if __name__ == '__main__':
             trainingMfcc = np.array(data["mfcc"])
             trainingMfccFlat = trainingMfcc.reshape((trainingMfcc.shape[0], trainingMfcc.shape[1]*trainingMfcc.shape[2]))
             trainingLabels = np.array(data["labels"])
-            #trainingMfccFlat = trainingMfcc.flatten()
             print(trainingMfcc.shape)
             print(trainingMfccFlat.shape)
             print(trainingLabels.shape)
 
-            # testNN = NeuralNetwork([len(trainingMfccFlat[0]), 512, 256, 64, 10])
-            testNN = NeuralNetwork([len(trainingMfccFlat[0]), 512, 155, 64, 10])
-            testNN.train(trainingMfccFlat, trainingLabels, alpha=0.00001, iterations=20, displayUpdate=1)
+            testNN = NeuralNetwork([len(trainingMfccFlat[0]), 512, 256, 64, 10])
 
-            testMfcc = [trainingMfccFlat[0], trainingMfccFlat[2100], trainingMfccFlat[3700], trainingMfccFlat[5500]]
-            testMfcc = np.array(testMfcc)
-            testLabels = [trainingLabels[0], trainingLabels[2100], trainingLabels[3700], trainingLabels[5500]]
-            testLabels = np.array(testLabels)
+            if JSON_PATH == "./data_original.json":
+                testNN.train(trainingMfccFlat, trainingLabels, alpha=0.001, iterations=10, displayUpdate=1)
+                testMfcc = [trainingMfccFlat[0], trainingMfccFlat[2100], trainingMfccFlat[3700], trainingMfccFlat[5500]]
+                testMfcc = np.array(testMfcc)
+                testLabels = [trainingLabels[0], trainingLabels[2100], trainingLabels[3700], trainingLabels[5500]]
+                testLabels = np.array(testLabels)
+            elif JSON_PATH == "./data_short.json":
+                testNN.train(trainingMfccFlat, trainingLabels, alpha=0.01, iterations=100, displayUpdate=10)
+                testMfcc = [trainingMfccFlat[0], trainingMfccFlat[30], trainingMfccFlat[55], trainingMfccFlat[89]]
+                testMfcc = np.array(testMfcc)
+                testLabels = [trainingLabels[0], trainingLabels[30], trainingLabels[55], trainingLabels[89]]
+                testLabels = np.array(testLabels)
+
             output = testNN.classify(testMfcc)
             prettyPrintResults(testLabels, output)
 
@@ -342,10 +361,10 @@ if __name__ == '__main__':
 
 
 
-        #test1_simple_one_layer_nn()
-        #test2_parametrized_w_hidden_layer_nn()
+        test1_simple_one_layer_nn()
+        test2_parametrized_w_hidden_layer_nn()
         #test3_MNIST_classification_nn()
-        test4_music_classification()
+        #test4_music_classification()
 
 
 
