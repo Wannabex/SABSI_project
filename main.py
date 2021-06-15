@@ -83,11 +83,8 @@ class NeuralNetwork:
     def train(self, X, y, learningRate=0.1, iterations=100000, displayUpdate=1000, normalizeX = False):
         print("Starting NN training")
         if normalizeX:
-            #print(f"min to {np.min(X)}, max to {np.max(X)}")
             X += np.abs(np.min(X))
-            #print(f"min to {np.min(X)}, max to {np.max(X)}")
             X /= np.max(np.abs(X), axis=0)
-            #print(f"min to {np.min(X)}, max to {np.max(X)}")
         X = np.c_[X, np.ones((X.shape[0]))]  # c_ joins slice objects to concatenation along the second axis
 
         # here we use it insert column of 1s - which is our bias. This approach will make it trainable parameter
@@ -336,7 +333,7 @@ if __name__ == '__main__':
                 testLabels = [trainingLabels[0], trainingLabels[2100], trainingLabels[3700], trainingLabels[5500]]
                 testLabels = np.array(testLabels)
             elif JSON_PATH == "./data_short.json":
-                testNN.train(trainingMfccFlat, trainingLabels, learningRate=0.01, iterations=500, displayUpdate=50, normalizeX=True)
+                testNN.train(trainingMfccFlat, trainingLabels, learningRate=0.001, iterations=500, displayUpdate=100, normalizeX=True)
                 testMfcc = [trainingMfccFlat[0], trainingMfccFlat[30], trainingMfccFlat[55], trainingMfccFlat[89]]
                 testMfcc = np.array(testMfcc)
                 testLabels = [trainingLabels[0], trainingLabels[30], trainingLabels[55], trainingLabels[89]]
