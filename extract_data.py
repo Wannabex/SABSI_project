@@ -9,6 +9,7 @@ SAMPLE_RATE = 22050
 TRACK_DURATION = 30 # measured in seconds
 SAMPLES_PER_TRACK = SAMPLE_RATE * TRACK_DURATION
 
+ONE_OUTPUT_NN = True
 
 def save_mfcc(dataset_path, json_path, num_mfcc=13, n_fft=2048, hop_length=512, num_segments=5):
     """Extracts MFCCs from music dataset and saves them into a json file along witgh genre labels.
@@ -65,11 +66,17 @@ def save_mfcc(dataset_path, json_path, num_mfcc=13, n_fft=2048, hop_length=512, 
                     if len(mfcc) == num_mfcc_vectors_per_segment:
                         data["mfcc"].append(mfcc.tolist())
                         labels_vector = []
-                        for current_label in range(10):
-                            if current_label == i-1:
+                        if ONE_OUTPUT_NN:
+                            if i - 1 == 0:
                                 labels_vector.append(1)
                             else:
                                 labels_vector.append(0)
+                        else:
+                            for current_label in range(10):
+                                if current_label == i-1:
+                                    labels_vector.append(1)
+                                else:
+                                    labels_vector.append(0)
 
                         data["labels"].append(labels_vector)
                         print("{}, segment:{}".format(file_path, d+1))
