@@ -80,11 +80,14 @@ class NeuralNetwork:
         w = np.random.randn(layers[-2] + 1, layers[-1])
         self.weights.append(w / np.sqrt(layers[-2]))
 
-    def train(self, X, y, learningRate=0.1, iterations=100000, displayUpdate=1000, batchSize=32):
+    def train(self, X, y, learningRate=0.1, iterations=100000, displayUpdate=1000, normalizeX = False):
         print("Starting NN training")
-        print(X)
-        print(X.shape)
-
+        if normalizeX:
+            #print(f"min to {np.min(X)}, max to {np.max(X)}")
+            X += np.abs(np.min(X))
+            #print(f"min to {np.min(X)}, max to {np.max(X)}")
+            X /= np.max(np.abs(X), axis=0)
+            #print(f"min to {np.min(X)}, max to {np.max(X)}")
         X = np.c_[X, np.ones((X.shape[0]))]  # c_ joins slice objects to concatenation along the second axis
 
         # here we use it insert column of 1s - which is our bias. This approach will make it trainable parameter
@@ -107,12 +110,12 @@ class NeuralNetwork:
 
     def _feedForward(self, input_layer):
         layers_activations = [input_layer]
-        for layer in range(len(self.weights)-1):
+        for layer in range(len(self.weights)):
             current_layer_output = np.dot(layers_activations[layer], self.weights[layer])
             layers_activations.append(self._SigmoidActivation(current_layer_output))
             #layers_activations.append(self._ReLuActivation(current_layer_output))
-        last_layer_output = np.dot(layers_activations[-1], self.weights[-1])
-        layers_activations.append(self._SoftmaxActivation(last_layer_output))
+        #last_layer_output = np.dot(layers_activations[-1], self.weights[-1])
+        #layers_activations.append(self._SoftmaxActivation(last_layer_output))
         return layers_activations
 
     def _backPropagate(self, layers_activations, target_output):
@@ -132,15 +135,18 @@ class NeuralNetwork:
         loss = 0.5 * np.sum((classifications - y) ** 2)
         return loss
 
-    def classify(self, inputData, addBias=True):
+    def classify(self, inputData, addBias=True, normalizeX = False):
+        if normalizeX:
+            inputData += np.abs(np.min(inputData))
+            inputData /= np.max(np.abs(inputData), axis=0)
         classification = np.array(inputData, ndmin=2)
         if addBias:
             classification = np.c_[classification, np.ones((classification.shape[0]))]
 
-        for layer in range(len(self.weights)-1):
+        for layer in range(len(self.weights)):
             classification = self._SigmoidActivation(np.dot(classification, self.weights[layer]))
             #classification = self._ReLuActivation(np.dot(classification, self.weights[layer]))
-        classification = self._SoftmaxActivation(np.dot(classification, self.weights[-1]))
+        #classification = self._SoftmaxActivation(np.dot(classification, self.weights[-1]))
         return classification
 
     def _SigmoidActivation(self, x):
@@ -298,7 +304,7 @@ if __name__ == '__main__':
 
             testNN = NeuralNetwork([trainX.shape[1], 32, 16, 10])  # 10 outputs is necessary for every digit
             print("[INFO] training network...")
-            testNN.train(trainX, trainY, iterations=1000, displayUpdate=100)
+            testNN.train(trainX, trainY, learningRate=0.1, iterations=1000, displayUpdate=100)
 
             print("[INFO] evaluating network...")
             classifications = testNN.classify(testX)
@@ -321,28 +327,28 @@ if __name__ == '__main__':
             print(trainingMfccFlat.shape)
             print(trainingLabels.shape)
 
-            testNN = NeuralNetwork([len(trainingMfccFlat[0]), 265, 10])
+            testNN = NeuralNetwork([len(trainingMfccFlat[0]), 512, 265, 64, 10])
 
             if JSON_PATH == "./data_original.json":
-                testNN.train(trainingMfccFlat, trainingLabels, learningRate=0.001, iterations=10, displayUpdate=1)
+                testNN.train(trainingMfccFlat, trainingLabels, learningRate=0.001, iterations=10, displayUpdate=1, normalizeX=True)
                 testMfcc = [trainingMfccFlat[0], trainingMfccFlat[2100], trainingMfccFlat[3700], trainingMfccFlat[5500]]
                 testMfcc = np.array(testMfcc)
                 testLabels = [trainingLabels[0], trainingLabels[2100], trainingLabels[3700], trainingLabels[5500]]
                 testLabels = np.array(testLabels)
             elif JSON_PATH == "./data_short.json":
-                testNN.train(trainingMfccFlat, trainingLabels, learningRate=0.001, iterations=5000, displayUpdate=100)
+                testNN.train(trainingMfccFlat, trainingLabels, learningRate=0.01, iterations=500, displayUpdate=50, normalizeX=True)
                 testMfcc = [trainingMfccFlat[0], trainingMfccFlat[30], trainingMfccFlat[55], trainingMfccFlat[89]]
                 testMfcc = np.array(testMfcc)
                 testLabels = [trainingLabels[0], trainingLabels[30], trainingLabels[55], trainingLabels[89]]
                 testLabels = np.array(testLabels)
             elif JSON_PATH == "./data_shorter.json":
-                testNN.train(trainingMfccFlat, trainingLabels, learningRate=0.001, iterations=10000, displayUpdate=1000)
+                testNN.train(trainingMfccFlat, trainingLabels, learningRate=0.001, iterations=10000, displayUpdate=1000, normalizeX=True)
                 testMfcc = [trainingMfccFlat[0], trainingMfccFlat[3], trainingMfccFlat[5], trainingMfccFlat[8]]
                 testMfcc = np.array(testMfcc)
                 testLabels = [trainingLabels[0], trainingLabels[3], trainingLabels[5], trainingLabels[8]]
                 testLabels = np.array(testLabels)
 
-            output = testNN.classify(testMfcc)
+            output = testNN.classify(testMfcc, normalizeX=True)
             prettyPrintResults(testLabels, output)
 
             # output = testNN.classify(trainingMfccFlat)
@@ -363,24 +369,22 @@ if __name__ == '__main__':
             print(trainingMfccFlat.shape)
             print(trainingLabels.shape)
 
-            testNN = NeuralNetwork([len(trainingMfccFlat[0]), 512, 264, 1])
-            testNN.train(trainingMfccFlat, trainingLabels, learningRate=0.001, iterations=2, displayUpdate=1)
-            quit()
+            testNN = NeuralNetwork([len(trainingMfccFlat[0]), 512, 264, 64, 1])
 
             if JSON_PATH == "./data_original.json":
-                testNN.train(trainingMfccFlat, trainingLabels, learningRate=0.001, iterations=10, displayUpdate=1)
+                testNN.train(trainingMfccFlat, trainingLabels, learningRate=0.001, iterations=10, displayUpdate=1, normalizeX=True)
                 testMfcc = [trainingMfccFlat[0], trainingMfccFlat[2100], trainingMfccFlat[3700], trainingMfccFlat[5500]]
                 testMfcc = np.array(testMfcc)
                 testLabels = [trainingLabels[0], trainingLabels[2100], trainingLabels[3700], trainingLabels[5500]]
                 testLabels = np.array(testLabels)
             elif JSON_PATH == "./data_short.json":
-                testNN.train(trainingMfccFlat, trainingLabels, learningRate=0.00001, iterations=100, displayUpdate=10)
+                testNN.train(trainingMfccFlat, trainingLabels, learningRate=0.0001, iterations=100, displayUpdate=10, normalizeX=True)
                 testMfcc = [trainingMfccFlat[0], trainingMfccFlat[30], trainingMfccFlat[55], trainingMfccFlat[89]]
                 testMfcc = np.array(testMfcc)
                 testLabels = [trainingLabels[0], trainingLabels[30], trainingLabels[55], trainingLabels[89]]
                 testLabels = np.array(testLabels)
             elif JSON_PATH == "./data_shorter.json":
-                testNN.train(trainingMfccFlat, trainingLabels, learningRate=0.001, iterations=10000, displayUpdate=1000)
+                testNN.train(trainingMfccFlat, trainingLabels, learningRate=0.001, iterations=10000, displayUpdate=1000, normalizeX=True)
                 testMfcc = [trainingMfccFlat[0], trainingMfccFlat[3], trainingMfccFlat[5], trainingMfccFlat[8]]
                 testMfcc = np.array(testMfcc)
                 testLabels = [trainingLabels[0], trainingLabels[3], trainingLabels[5], trainingLabels[8]]
@@ -398,8 +402,8 @@ if __name__ == '__main__':
         #test1_simple_one_layer_nn()
         #test2_parametrized_w_hidden_layer_nn()
         #test3_MNIST_classification_nn()
-        #test4_music_classification()
-        test5_music_classification_1output()
+        test4_music_classification()
+        #test5_music_classification_1output()
 
 
 
