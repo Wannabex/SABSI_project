@@ -96,6 +96,7 @@ class NeuralNetwork:
 
             if iteration % displayUpdate == 0:
                 print(f"On iteration number {iteration}, loss = {self._calculateLoss(X, y)}")
+                self.getAccuracy(X, y)
 
     def _trainPartial(self, x, y, learningRate):
         x = np.array(x, ndmin=2)  # transform x into matrix
@@ -104,6 +105,19 @@ class NeuralNetwork:
         # weights update
         for layer in range(len(self.weights)):
             self.weights[layer] += -learningRate * activations[layer].T.dot(deltas[layer])
+
+    def getAccuracy(self, X,y):
+        X=np.c_[X, np.ones((X.shape[0]))]
+        totalCorrect = 0
+        total = 0 
+        for(x, target) in zip(X-1,y):
+            x = np.array(x, ndmin=2)
+            logits = self._feedForward(x)[-1]
+            pred_y = np.array(logits).argmax()
+            target = np.array(target).argmax()
+            total += 1
+            totalCorrect += pred_y == target
+            print("Acc is ", totalCorrect/total)
 
     def _feedForward(self, input_layer):
         layers_activations = [input_layer]
@@ -114,6 +128,8 @@ class NeuralNetwork:
         #last_layer_output = np.dot(layers_activations[-1], self.weights[-1])
         #layers_activations.append(self._SoftmaxActivation(last_layer_output))
         return layers_activations
+
+
 
     def _backPropagate(self, layers_activations, target_output):
         error = layers_activations[-1] - target_output  # activations[-1] is the last layer - output
@@ -350,6 +366,7 @@ if __name__ == '__main__':
 
             # output = testNN.classify(trainingMfccFlat)
             # prettyPrintResults(trainingLabels, output)
+
 
         def test5_music_classification_1output():
             print(f"\nStarting test5 - {test5_music_classification_1output.__name__}")
