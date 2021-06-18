@@ -86,7 +86,6 @@ class NeuralNetwork:
             X += np.abs(np.min(X))
             X /= np.max(np.abs(X), axis=0)
         X = np.c_[X, np.ones((X.shape[0]))]  # c_ joins slice objects to concatenation along the second axis
-
         # here we use it insert column of 1s - which is our bias. This approach will make it trainable parameter
         #  we do that concatenation because we want to insert column of 1's as biases
 
@@ -107,17 +106,17 @@ class NeuralNetwork:
             self.weights[layer] += -learningRate * activations[layer].T.dot(deltas[layer])
 
     def getAccuracy(self, X,y):
-        X=np.c_[X, np.ones((X.shape[0]))]
+        #X=np.c_[X, np.ones((X.shape[0]))]
         totalCorrect = 0
         total = 0 
-        for(x, target) in zip(X-1,y):
+        for(x, target) in zip(X,y):
             x = np.array(x, ndmin=2)
             logits = self._feedForward(x)[-1]
             pred_y = np.array(logits).argmax()
             target = np.array(target).argmax()
             total += 1
             totalCorrect += pred_y == target
-            print("Acc is ", totalCorrect/total)
+        print("Acc is ", totalCorrect/total)
 
     def _feedForward(self, input_layer):
         layers_activations = [input_layer]
@@ -349,7 +348,7 @@ if __name__ == '__main__':
                 testLabels = [trainingLabels[0], trainingLabels[2100], trainingLabels[3700], trainingLabels[5500]]
                 testLabels = np.array(testLabels)
             elif JSON_PATH == "./data_short.json":
-                testNN.train(trainingMfccFlat, trainingLabels, learningRate=0.001, iterations=500, displayUpdate=100, normalizeX=True)
+                testNN.train(trainingMfccFlat, trainingLabels, learningRate=0.1, iterations=500, displayUpdate=100, normalizeX=True)
                 testMfcc = [trainingMfccFlat[0], trainingMfccFlat[30], trainingMfccFlat[55], trainingMfccFlat[89]]
                 testMfcc = np.array(testMfcc)
                 testLabels = [trainingLabels[0], trainingLabels[30], trainingLabels[55], trainingLabels[89]]
@@ -392,7 +391,7 @@ if __name__ == '__main__':
                 testLabels = [trainingLabels[0], trainingLabels[2100], trainingLabels[3700], trainingLabels[5500]]
                 testLabels = np.array(testLabels)
             elif JSON_PATH == "./data_short.json":
-                testNN.train(trainingMfccFlat, trainingLabels, learningRate=0.0001, iterations=100, displayUpdate=10, normalizeX=True)
+                testNN.train(trainingMfccFlat, trainingLabels, learningRate=0.001, iterations=100, displayUpdate=10, normalizeX=True)
                 testMfcc = [trainingMfccFlat[0], trainingMfccFlat[30], trainingMfccFlat[55], trainingMfccFlat[89]]
                 testMfcc = np.array(testMfcc)
                 testLabels = [trainingLabels[0], trainingLabels[30], trainingLabels[55], trainingLabels[89]]
