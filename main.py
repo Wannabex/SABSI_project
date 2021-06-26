@@ -179,12 +179,17 @@ class NeuralNetwork:
         return output
 
     # To niepotrzebne w sumie, chyba że trenowanie będzie trwało 50 godzin to może lepiej wtedy zaimplementować
-    def saveNetworkParameters(self, fileName='nn_parameters'):
-        print(f'Saving neural network parame ers to file {fileName}')
+    def saveNetworkParameters(self, fileName='nn_parameters.npy'):
+        print(f'Saving neural network parameters to file {fileName}')
+        from numpy import save
+        save(fileName, self.weights)
+
 
     # To niepotrzebne w sumie, chyba że trenowanie będzie trwało 50 godzin to może lepiej wtedy zaimplementować
-    def loadNetworkParameters(self, fileName='nn_parameters'):
+    def loadNetworkParameters(self, fileName='nn_parameters.npy'):
         print(f'Loading neural network parameters from file {fileName}')
+        from numpy import load
+        self.weights = load(fileName)
 
 
 def prettyPrintResults(expectedOutput, NNOutput):
@@ -409,14 +414,56 @@ if __name__ == '__main__':
             # output = testNN.classify(trainingMfccFlat)
             # prettyPrintResults(trainingLabels, output)
 
+        def test6_save_nn_to_file():
+            print(f"\nStarting test6 - {test6_save_nn_to_file.__name__}")
+            print("Testing NN with 4 inputs and 1 output. We want NN to output 1 whenever the rightmost of 4 input bits is 1. NN is saved to file in the end\n")
+            trainingX = np.array([[0, 0, 0, 0],
+                                  [0, 0, 1, 1],  # this outputs 1
+                                  [0, 1, 0, 1],  # and this
+                                  [0, 1, 1, 0],
+                                  [1, 0, 0, 1],  # and this
+                                  [1, 0, 1, 0],
+                                  [1, 1, 0, 0],
+                                  [1, 1, 1, 0]])
+            trainingy = np.array([[0, 1, 1, 0, 1, 0, 0, 0]]).T
 
+            testNN = NeuralNetwork([len(trainingX[0]), 1])
+
+            testNN.train(trainingX, trainingy, iterations=100000, displayUpdate=10000)
+            testX = np.array([[0, 0, 0, 1],
+                              [1, 0, 1, 0],
+                              [0, 0, 0, 1],
+                              [0, 0, 0, 1],
+                              [0, 0, 1, 0],
+                              [0, 0, 0, 1]])
+            testy = np.array([[1, 0, 1, 1, 0, 1]]).T
+            output = testNN.classify(testX)
+            prettyPrintResults(testy, output)
+            testNN.saveNetworkParameters("4in1outNN.npy")
+
+        def test7_load_nn_from_file():
+            print(f"\nStarting test7 - {test7_load_nn_from_file.__name__}")
+            print("Loading NN from file. Testing NN with 4 inputs and 1 output. We want NN to output 1 whenever the rightmost of 4 input bits is 1.\n")
+            testNN = NeuralNetwork([4, 1])
+            testNN.loadNetworkParameters("4in1outNN.npy")
+            testX = np.array([[0, 0, 0, 1],
+                              [1, 0, 1, 0],
+                              [0, 0, 0, 1],
+                              [0, 0, 0, 1],
+                              [0, 0, 1, 0],
+                              [0, 0, 0, 1]])
+            testy = np.array([[1, 0, 1, 1, 0, 1]]).T
+            output = testNN.classify(testX)
+            prettyPrintResults(testy, output)
 
 
         #test1_simple_one_layer_nn()
         #test2_parametrized_w_hidden_layer_nn()
         #test3_MNIST_classification_nn()
-        test4_music_classification()
+        #test4_music_classification()
         #test5_music_classification_1output()
+        test6_save_nn_to_file()
+        test7_load_nn_from_file()
 
 
 
