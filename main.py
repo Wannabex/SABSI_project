@@ -71,7 +71,6 @@ class IntelligentRadio:
         songData = self._songAnalyze(song_path)
         songData = songData.reshape(10, 1690)
         genre = self._checkGenre(songData)
-        print(genre)
         if genre == self.forbiddenGenre:
           print(f"Sorry this radio was trained not to play songs of this genre.")
         else:
@@ -102,10 +101,11 @@ class IntelligentRadio:
 
 
     def _checkGenre(self, song):
-        genres_argmaxes = {0: 0, 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0, 7: 0, 8: 0, 9: 0}
+        genres_argmaxes = {IntelligentRadio.BLUES: 0, IntelligentRadio.CLASSICAL: 0, IntelligentRadio.COUNTRY: 0,
+                           IntelligentRadio.DISCO: 0, IntelligentRadio.HIPHOP: 0, IntelligentRadio.JAZZ: 0,
+                           IntelligentRadio.METAL: 0, IntelligentRadio.POP: 0, IntelligentRadio.REGGAE: 0, IntelligentRadio.ROCK: 0}
         for segment in song:
             genres_argmaxes[np.argmax(self.intelligence.classify(segment))] += 1
-        print(genres_argmaxes)
         return self._find_genre_max(genres_argmaxes)
 
     def _find_genre_max(self, genres_classifications):
@@ -257,8 +257,17 @@ if __name__ == '__main__':
     if RELEASE_VERSION:
         print('Starting intelligent radio')
         radioIntelligence = NeuralNetwork([1690, 512, 265, 64, 10])
-        radioIntelligence.loadNetworkParameters("music_classification_nn.npy")
-        radyjko = IntelligentRadio(radioIntelligence, IntelligentRadio.JAZZ)
+
+        with open(JSON_PATH, "r") as fp:
+            data = json.load(fp)
+        trainingMfcc = np.array(data["mfcc"])
+        trainingMfccFlat = trainingMfcc.reshape((trainingMfcc.shape[0], trainingMfcc.shape[1] * trainingMfcc.shape[2]))
+        trainingLabels = np.array(data["labels"])
+        radioIntelligence.train(trainingMfccFlat, trainingLabels, learningRate=0.1, iterations=3000, displayUpdate=100,
+                     normalizeX=True)
+
+        #radioIntelligence.loadNetworkParameters("music_classification_nn.npy")
+        radyjko = IntelligentRadio(radioIntelligence, IntelligentRadio.DISCO)
         wantedSongName = 'my_favourite_disco.wav'
         radyjko.classifyAndPlay(wantedSongName)
         wantedSongName = "my_favourite_rock.wav"
@@ -405,8 +414,7 @@ if __name__ == '__main__':
                 testLabels = [trainingLabels[0], trainingLabels[2100], trainingLabels[3700], trainingLabels[5500]]
                 testLabels = np.array(testLabels)
             elif JSON_PATH == "./data_short.json":
-                testNN.loadNetworkParameters("music_classification.npy")
-                #testNN.train(trainingMfccFlat, trainingLabels, learningRate=0.1, iterations=150, displayUpdate=10, normalizeX=True)
+                #testNN.train(trainingMfccFlat, trainingLabels, learningRate=0.1, iterations=600, displayUpdate=100, normalizeX=True)
                 testMfcc = [trainingMfccFlat[0], trainingMfccFlat[30], trainingMfccFlat[55], trainingMfccFlat[89]]
                 testMfcc = np.array(testMfcc)
                 testLabels = [trainingLabels[0], trainingLabels[30], trainingLabels[55], trainingLabels[89]]
