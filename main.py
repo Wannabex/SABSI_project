@@ -35,33 +35,87 @@ OK 3. Przygotowanie frontendu i klasy radia czyli umożliwienie włączania muzy
 """
 
 import numpy as np  # for better representation of data and to simplify mathematical operations that happen between neurons
+from playsound import playsound
+import librosa
+import math
 import json
 
 
 JSON_PATH = "./data_short.json"
 
 class IntelligentRadio:
-    POP = 0
-    DISCOPOLO = 1
-    HIPHOP = 2
-    # itp itd.
+    BLUES = 0
+    CLASSICAL = 1
+    COUNTRY = 2
+    DISCO = 3
+    HIPHOP = 4
+    JAZZ = 5
+    METAL = 6
+    POP = 7
+    REGGAE = 8
+    ROCK = 9
 
+    SAMPLE_RATE = 22050
+    TRACK_DURATION = 30  # measured in seconds
+    NUM_SEGMENTS = 10
+    SAMPLES_PER_TRACK = SAMPLE_RATE * TRACK_DURATION
     def __init__(self, neuralNetwork, forbiddenGenre):
         self.intelligence = neuralNetwork
-        # music player object
         self.forbiddenGenre = forbiddenGenre
+        self.num_mfcc = 13
+        self.n_fft = 2048
+        self.hop_length = 512
+        self.num_segments = 5
 
-    def classifyAndPlay(self, mp3_path):
-        # song = mp3open(mp3_path)
-        # genre = checkGenre(song)
-        # if genre == self.forbiddenGenre:
-        #   dont play this song!
-        # playmp3(song)
-        pass
+    def classifyAndPlay(self, song_path):
+        songData = self._songAnalyze(song_path)
+        songData = songData.reshape(10, 1690)
+        genre = self._checkGenre(songData)
+        print(genre)
+        if genre == self.forbiddenGenre:
+          print(f"Sorry this radio was trained not to play songs of this genre.")
+        else:
+            playsound(song_path)
 
-    def checkGenre(self, song):
-        # classifiedGenre = self.intelligence.classify(song)
-        pass
+    def _songAnalyze(self, song):
+        # load audio file
+        songData = []
+        signal, sample_rate = librosa.load(song, sr=IntelligentRadio.SAMPLE_RATE)
+
+        samples_per_segment = int(IntelligentRadio.SAMPLES_PER_TRACK / IntelligentRadio.NUM_SEGMENTS)
+        num_mfcc_vectors_per_segment = math.ceil(samples_per_segment / self.hop_length)
+
+        # process all segments of audio file
+        for d in range(IntelligentRadio.NUM_SEGMENTS):
+            # calculate start and finish sample for current segment
+            start = samples_per_segment * d
+            finish = start + samples_per_segment
+
+            # extract mfcc
+            mfcc = librosa.feature.mfcc(signal[start:finish], sample_rate, n_mfcc=self.num_mfcc, n_fft=self.n_fft, hop_length=self.hop_length)
+            mfcc = mfcc.T
+
+            # store only mfcc feature with expected number of vectors
+            if len(mfcc) == num_mfcc_vectors_per_segment:
+               songData.append(mfcc)
+        return np.array(songData)
+
+
+    def _checkGenre(self, song):
+        genres_argmaxes = {0: 0, 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0, 7: 0, 8: 0, 9: 0}
+        for segment in song:
+            genres_argmaxes[np.argmax(self.intelligence.classify(segment))] += 1
+        print(genres_argmaxes)
+        return self._find_genre_max(genres_argmaxes)
+
+    def _find_genre_max(self, genres_classifications):
+        current_max = 0
+        current_max_count = 0
+        for genre in range(len(genres_classifications)):
+            if genres_classifications[genre] > current_max_count:
+                current_max = genre
+                current_max_count = genres_classifications[genre]
+        return current_max
 
 
 class NeuralNetwork:
@@ -181,15 +235,13 @@ class NeuralNetwork:
     # To niepotrzebne w sumie, chyba że trenowanie będzie trwało 50 godzin to może lepiej wtedy zaimplementować
     def saveNetworkParameters(self, fileName='nn_parameters.npy'):
         print(f'Saving neural network parameters to file {fileName}')
-        from numpy import save
-        save(fileName, self.weights)
+        np.save(fileName, self.weights)
 
 
     # To niepotrzebne w sumie, chyba że trenowanie będzie trwało 50 godzin to może lepiej wtedy zaimplementować
     def loadNetworkParameters(self, fileName='nn_parameters.npy'):
         print(f'Loading neural network parameters from file {fileName}')
-        from numpy import load
-        self.weights = load(fileName)
+        self.weights = np.load(fileName, allow_pickle=True)
 
 
 def prettyPrintResults(expectedOutput, NNOutput):
@@ -198,22 +250,22 @@ def prettyPrintResults(expectedOutput, NNOutput):
     print()  # newline
 
 
-RELEASE_VERSION = False
-RUN_TESTS = True
+RELEASE_VERSION = True
+RUN_TESTS = False
 
 if __name__ == '__main__':
     if RELEASE_VERSION:
         print('Starting intelligent radio')
-        radioIntelligence = NeuralNetwork()
-        radioIntelligence.train()  # albo musicNN.loadNetworkParameters()
-        # musicNN.saveNetworkParameters()
-
-        radyjko = IntelligentRadio(radioIntelligence, IntelligentRadio.DISCOPOLO, )
-        wantedSongName = 'moje_ulubione_discopolo.mp3'
+        radioIntelligence = NeuralNetwork([1690, 512, 265, 64, 10])
+        radioIntelligence.loadNetworkParameters("music_classification_nn.npy")
+        radyjko = IntelligentRadio(radioIntelligence, IntelligentRadio.JAZZ)
+        wantedSongName = 'my_favourite_disco.wav'
+        radyjko.classifyAndPlay(wantedSongName)
+        wantedSongName = "my_favourite_rock.wav"
         radyjko.classifyAndPlay(wantedSongName)
         print('Turning off the radio')
 
-    if RUN_TESTS:
+    elif RUN_TESTS:
         print("Starting tests")
 
         def test1_simple_one_layer_nn():
@@ -353,7 +405,8 @@ if __name__ == '__main__':
                 testLabels = [trainingLabels[0], trainingLabels[2100], trainingLabels[3700], trainingLabels[5500]]
                 testLabels = np.array(testLabels)
             elif JSON_PATH == "./data_short.json":
-                testNN.train(trainingMfccFlat, trainingLabels, learningRate=0.1, iterations=500, displayUpdate=100, normalizeX=True)
+                testNN.loadNetworkParameters("music_classification.npy")
+                #testNN.train(trainingMfccFlat, trainingLabels, learningRate=0.1, iterations=150, displayUpdate=10, normalizeX=True)
                 testMfcc = [trainingMfccFlat[0], trainingMfccFlat[30], trainingMfccFlat[55], trainingMfccFlat[89]]
                 testMfcc = np.array(testMfcc)
                 testLabels = [trainingLabels[0], trainingLabels[30], trainingLabels[55], trainingLabels[89]]
@@ -367,10 +420,7 @@ if __name__ == '__main__':
 
             output = testNN.classify(testMfcc, normalizeX=True)
             prettyPrintResults(testLabels, output)
-
-            # output = testNN.classify(trainingMfccFlat)
-            # prettyPrintResults(trainingLabels, output)
-
+            testNN.saveNetworkParameters("music_classification.npy")
 
         def test5_music_classification_1output():
             print(f"\nStarting test5 - {test5_music_classification_1output.__name__}")
@@ -460,10 +510,10 @@ if __name__ == '__main__':
         #test1_simple_one_layer_nn()
         #test2_parametrized_w_hidden_layer_nn()
         #test3_MNIST_classification_nn()
-        #test4_music_classification()
+        test4_music_classification()
         #test5_music_classification_1output()
-        test6_save_nn_to_file()
-        test7_load_nn_from_file()
+        #test6_save_nn_to_file()
+        #test7_load_nn_from_file()
 
 
 
