@@ -94,8 +94,7 @@ class NeuralNetwork:
                 self._trainPartial(X_sample, target, learningRate)  # train partial works on every individual sample in X, y. One by one these are passed as (X_sample, target) tuples.
 
             if iteration % displayUpdate == 0:
-                print(f"On iteration number {iteration}, loss = {self._calculateLoss(X, y)}")
-                self.getAccuracy(X, y)
+                print(f"On iteration number {iteration}, loss = {self._calculateLoss(X, y)}, acc = {self.getAccuracy(X, y)}")
 
     def _trainPartial(self, x, y, learningRate):
         x = np.array(x, ndmin=2)  # transform x into matrix
@@ -116,7 +115,8 @@ class NeuralNetwork:
             target = np.array(target).argmax()
             total += 1
             totalCorrect += pred_y == target
-        print("Acc is ", totalCorrect/total)
+        #print("Acc is ", totalCorrect/total)
+        return totalCorrect/total
 
     def _feedForward(self, input_layer):
         layers_activations = [input_layer]
