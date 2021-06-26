@@ -43,6 +43,7 @@ import json
 
 JSON_PATH = "./data_short.json"
 
+
 class IntelligentRadio:
     BLUES = 0
     CLASSICAL = 1
@@ -251,6 +252,8 @@ def prettyPrintResults(expectedOutput, NNOutput):
 
 
 RELEASE_VERSION = True
+NN_ALREADY_TRAINED = True
+
 RUN_TESTS = False
 
 if __name__ == '__main__':
@@ -258,16 +261,17 @@ if __name__ == '__main__':
         print('Starting intelligent radio')
         radioIntelligence = NeuralNetwork([1690, 512, 265, 64, 10])
 
-        with open(JSON_PATH, "r") as fp:
-            data = json.load(fp)
-        trainingMfcc = np.array(data["mfcc"])
-        trainingMfccFlat = trainingMfcc.reshape((trainingMfcc.shape[0], trainingMfcc.shape[1] * trainingMfcc.shape[2]))
-        trainingLabels = np.array(data["labels"])
-        radioIntelligence.train(trainingMfccFlat, trainingLabels, learningRate=0.1, iterations=3000, displayUpdate=100,
-                     normalizeX=True)
-
-        #radioIntelligence.loadNetworkParameters("music_classification_nn.npy")
-        radyjko = IntelligentRadio(radioIntelligence, IntelligentRadio.DISCO)
+        if not NN_ALREADY_TRAINED:
+            with open(JSON_PATH, "r") as fp:
+                data = json.load(fp)
+            trainingMfcc = np.array(data["mfcc"])
+            trainingMfccFlat = trainingMfcc.reshape((trainingMfcc.shape[0], trainingMfcc.shape[1] * trainingMfcc.shape[2]))
+            trainingLabels = np.array(data["labels"])
+            radioIntelligence.train(trainingMfccFlat, trainingLabels, learningRate=0.1, iterations=3000, displayUpdate=100,
+                         normalizeX=True)
+        else:
+            radioIntelligence.loadNetworkParameters("music_classification.npy")
+        radyjko = IntelligentRadio(radioIntelligence, IntelligentRadio.JAZZ)
         wantedSongName = 'my_favourite_disco.wav'
         radyjko.classifyAndPlay(wantedSongName)
         wantedSongName = "my_favourite_rock.wav"
