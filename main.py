@@ -263,17 +263,7 @@ if __name__ == '__main__':
             songPath = sys.argv[1]
             print('Starting intelligent radio')
             radioIntelligence = NeuralNetwork([1690, 512, 265, 64, 10])
-
-            if not NN_ALREADY_TRAINED:
-                with open(JSON_PATH, "r") as fp:
-                    data = json.load(fp)
-                trainingMfcc = np.array(data["mfcc"])
-                trainingMfccFlat = trainingMfcc.reshape((trainingMfcc.shape[0], trainingMfcc.shape[1] * trainingMfcc.shape[2]))
-                trainingLabels = np.array(data["labels"])
-                radioIntelligence.train(trainingMfccFlat, trainingLabels, learningRate=0.1, iterations=3000, displayUpdate=100,
-                             normalizeX=True)
-            else:
-                radioIntelligence.loadNetworkParameters("music_classification.npy")
+            radioIntelligence.loadNetworkParameters("music_classification.npy")
 
             radyjko = IntelligentRadio(radioIntelligence, IntelligentRadio.JAZZ)
             radyjko.classifyAndPlay(songPath)
@@ -448,9 +438,6 @@ if __name__ == '__main__':
             trainingMfcc = np.array(data["mfcc"])
             trainingMfccFlat = trainingMfcc.reshape((trainingMfcc.shape[0], trainingMfcc.shape[1]*trainingMfcc.shape[2]))
             trainingLabels = np.array(data["labels"])
-            print(trainingMfcc.shape)
-            print(trainingMfccFlat.shape)
-            print(trainingLabels.shape)
 
             testNN = NeuralNetwork([len(trainingMfccFlat[0]), 512, 264, 64, 1])
 
@@ -476,8 +463,6 @@ if __name__ == '__main__':
             output = testNN.classify(testMfcc)
             prettyPrintResults(testLabels, output)
 
-            # output = testNN.classify(trainingMfccFlat)
-            # prettyPrintResults(trainingLabels, output)
 
         def test6_save_nn_to_file():
             print(f"\nStarting test6 - {test6_save_nn_to_file.__name__}")
