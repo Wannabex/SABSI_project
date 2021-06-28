@@ -39,6 +39,7 @@ from playsound import playsound
 import librosa
 import math
 import json
+import sys
 
 
 JSON_PATH = "./data_short.json"
@@ -258,25 +259,27 @@ RUN_TESTS = False
 
 if __name__ == '__main__':
     if RELEASE_VERSION:
-        print('Starting intelligent radio')
-        radioIntelligence = NeuralNetwork([1690, 512, 265, 64, 10])
+        if len(sys.argv) > 1:
+            songPath = sys.argv[1]
+            print('Starting intelligent radio')
+            radioIntelligence = NeuralNetwork([1690, 512, 265, 64, 10])
 
-        if not NN_ALREADY_TRAINED:
-            with open(JSON_PATH, "r") as fp:
-                data = json.load(fp)
-            trainingMfcc = np.array(data["mfcc"])
-            trainingMfccFlat = trainingMfcc.reshape((trainingMfcc.shape[0], trainingMfcc.shape[1] * trainingMfcc.shape[2]))
-            trainingLabels = np.array(data["labels"])
-            radioIntelligence.train(trainingMfccFlat, trainingLabels, learningRate=0.1, iterations=3000, displayUpdate=100,
-                         normalizeX=True)
+            if not NN_ALREADY_TRAINED:
+                with open(JSON_PATH, "r") as fp:
+                    data = json.load(fp)
+                trainingMfcc = np.array(data["mfcc"])
+                trainingMfccFlat = trainingMfcc.reshape((trainingMfcc.shape[0], trainingMfcc.shape[1] * trainingMfcc.shape[2]))
+                trainingLabels = np.array(data["labels"])
+                radioIntelligence.train(trainingMfccFlat, trainingLabels, learningRate=0.1, iterations=3000, displayUpdate=100,
+                             normalizeX=True)
+            else:
+                radioIntelligence.loadNetworkParameters("music_classification.npy")
+
+            radyjko = IntelligentRadio(radioIntelligence, IntelligentRadio.JAZZ)
+            radyjko.classifyAndPlay(songPath)
+            print('Turning off the radio')
         else:
-            radioIntelligence.loadNetworkParameters("music_classification.npy")
-        radyjko = IntelligentRadio(radioIntelligence, IntelligentRadio.JAZZ)
-        wantedSongName = 'my_favourite_disco.wav'
-        radyjko.classifyAndPlay(wantedSongName)
-        wantedSongName = "my_favourite_rock.wav"
-        radyjko.classifyAndPlay(wantedSongName)
-        print('Turning off the radio')
+            print("Please write path to song to classify and play as script argument")
 
     elif RUN_TESTS:
         print("Starting tests")
