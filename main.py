@@ -103,21 +103,21 @@ class IntelligentRadio:
 
 
     def _checkGenre(self, song):
-        genres_argmaxes = {IntelligentRadio.BLUES: 0, IntelligentRadio.CLASSICAL: 0, IntelligentRadio.COUNTRY: 0,
+        genresArgmaxes = {IntelligentRadio.BLUES: 0, IntelligentRadio.CLASSICAL: 0, IntelligentRadio.COUNTRY: 0,
                            IntelligentRadio.DISCO: 0, IntelligentRadio.HIPHOP: 0, IntelligentRadio.JAZZ: 0,
                            IntelligentRadio.METAL: 0, IntelligentRadio.POP: 0, IntelligentRadio.REGGAE: 0, IntelligentRadio.ROCK: 0}
         for segment in song:
-            genres_argmaxes[np.argmax(self.intelligence.classify(segment))] += 1
-        return self._find_genre_max(genres_argmaxes)
+            genresArgmaxes[np.argmax(self.intelligence.classify(segment))] += 1
+        return self._findGenreMax(genresArgmaxes)
 
-    def _find_genre_max(self, genres_classifications):
-        current_max = 0
-        current_max_count = 0
-        for genre in range(len(genres_classifications)):
-            if genres_classifications[genre] > current_max_count:
-                current_max = genre
-                current_max_count = genres_classifications[genre]
-        return current_max
+    def _findGenreMax(self, genresClassifications):
+        currentMax = 0
+        currentMaxCount = 0
+        for genre in range(len(genresClassifications)):
+            if genresClassifications[genre] > currentMaxCount:
+                currentMax = genre
+                currentMaxCount = genresClassifications[genre]
+        return currentMax
 
 
 class NeuralNetwork:
